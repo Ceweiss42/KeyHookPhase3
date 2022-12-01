@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 from pymongo import collection
 import pymongo
-from bson import DBRef
+from bson.dbref import DBRef
 import random
 
 def setup():
@@ -43,19 +43,46 @@ def createBuildings():
 def createRooms():
     rooms: collection = db.Rooms
 
+    room_validator = {
+        'validator': {
+            '$jsonSchema': {
+                # Signifies that this schema is complex, has parameters within it.
+                # These can be nested.
+                'bsonType': "object",
+                'description': "A room within a building",
+                'required': ["building_name", "room_number"],
+                'additionalProperties': False,
+                'properties': {
+                    # I would LIKE to demand an ObjectID here, but I cannot figure out how
+                    '_id': {},
+                    'building_name': {
+                        'bsonType': "DBRef",
+                        "description": "name of building room is in"
+                    },
+                    'room_number': {
+                        # the type "number" matches integer, decimal, double, and long
+                        'bsonType': "number",
+                        "description": "number of the room",
+                    }
+                }
+            }
+        }
+    }
+    db.command('collMod', 'Rooms', **room_validator)
+
     rooms.delete_many({})
-    rooms.create_index([("building_name", pymongo.ASCENDING)], unique=True)
-    rooms.create_index([("room_number", pymongo.ASCENDING)], unique=True)
+    rooms.create_index([("building_name", pymongo.ASCENDING), ("room_number", pymongo.ASCENDING)], unique=True)
     buildingNames = []
-    for line in db.buildings.find():
+    buildings = db.Buildings
+    for line in buildings.find():
         buildingNames.append(line["building_name"])
 
     for bn in buildingNames:
         randoms = random.sample(range(100, 460), 3)
         rooms.insert_many([
-            {"building_name": DBRef(), "room_number" : randoms[0]},
-            {"building_name": DBRef(), "room_number" : randoms[1]},
-            {"building_name": DBRef(), "room_number" : randoms[2]}
+            {"building_name": DBRef("Buildings", bn), "room_number" : int(randoms[0])},
+            {"building_name": DBRef("Buildings", bn), "room_number" : int(randoms[1])},
+            {"building_name": DBRef("Buildings", bn), "room_number" : int(randoms[2])}
         ])
 
     return rooms
@@ -73,4 +100,4 @@ if __name__ == "__main__":
 
     buildings, rooms = createTables()
 
-    print(buildings)
+    printTable(rooms)
