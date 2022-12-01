@@ -1,6 +1,8 @@
 from pymongo import MongoClient
 from pymongo import collection
 import pymongo
+from bson import DBRef
+import random
 
 def setup():
     client = MongoClient("mongodb+srv://group8:group8@keyhookphase3.hfewn3v.mongodb.net/?retryWrites=true&w=majority")
@@ -20,15 +22,12 @@ def printTable(table : collection):
     for line in lines:
         printCollectionLine(line)
 
-
-if __name__ == "__main__":
-    db = setup()
-    print('In main: ', db.list_collection_names())
-    buildings : collection = db.Buildings
+def createBuildings():
+    buildings: collection = db.Buildings
 
     buildings.delete_many({})
     buildings.create_index([("building_name", pymongo.ASCENDING)], unique=True)
-    result = buildings.insert_many([
+    buildings.insert_many([
         {"building_name": "VEC"},
         {"building_name": "ECS"},
         {"building_name": "HC"},
@@ -39,4 +38,39 @@ if __name__ == "__main__":
         {"building_name": "BMAC"}
     ])
 
-    printTable(buildings)
+    return buildings
+
+def createRooms():
+    rooms: collection = db.Rooms
+
+    rooms.delete_many({})
+    rooms.create_index([("building_name", pymongo.ASCENDING)], unique=True)
+    rooms.create_index([("room_number", pymongo.ASCENDING)], unique=True)
+    buildingNames = []
+    for line in db.buildings.find():
+        buildingNames.append(line["building_name"])
+
+    for bn in buildingNames:
+        randoms = random.sample(range(100, 460), 3)
+        rooms.insert_many([
+            {"building_name": DBRef(), "room_number" : randoms[0]},
+            {"building_name": DBRef(), "room_number" : randoms[1]},
+            {"building_name": DBRef(), "room_number" : randoms[2]}
+        ])
+
+    return rooms
+
+def createTables():
+    buildings = createBuildings()
+    rooms = createRooms()
+
+    return buildings, rooms
+
+
+if __name__ == "__main__":
+    db = setup()
+    print('In main: ', db.list_collection_names())
+
+    buildings, rooms = createTables()
+
+    print(buildings)
