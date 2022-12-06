@@ -8,9 +8,12 @@ class Utilities:
 
     """Return the size document for the given name."""
     @staticmethod
-    def get_doorname(db, door_name):
-        result = db.DoorNames.find_one({"door_name": door_name})['door_name']
-        return result
+    def get_doorname(db):
+        output = []
+        result = db.DoorNames.find()
+        for line in result:
+            output.append(line['door_name'])
+        return output
     """Return the room document for the given name."""
     @staticmethod
     def get_room(db, room):
