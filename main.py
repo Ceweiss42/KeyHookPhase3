@@ -117,10 +117,7 @@ def createTables():
 
     return buildings, rooms, employees, doornames, doors, hooks, keys
 
-    db.DoorNames.drop()
-    db.Hooks.drop()
-    db.Doors.drop()
-    db.Keys.drop()
+
 
 if __name__ == "__main__":
     db = setup()
