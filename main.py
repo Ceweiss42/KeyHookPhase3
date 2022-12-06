@@ -102,8 +102,78 @@ def createEmployees():
     return e
 
 def createDoorNames():
+    # create the doornames collection and populate it  with data
+    db.DoorNames.drop()
+    dn: collection = db.DoorNames
+    dn.create_index([("door_name", pymongo.ASCENDING)], unique=True)
+    insert_doornames = dn.insert_many([
+        {"door_name": "West"},
+        {"door_name": "East"},
+        {"door_name": "North"},
+        {"door_name": "South"},
+        {"door_name": "Front"},
+        {"door_name": "Back"},
+    ])
 
     return dn
+
+def createHooks():
+    db.Hooks.drop()
+    h: collection = db.Hooks
+    h.create_index([("hook_number", pymongo.ASCENDING)], unique=True)
+
+    insert_hooks = h.insert_many([
+        {"hook_number": 1},
+        {"hook_number": 2},
+        {"hook_number": 3},
+        {"hook_number": 4},
+        {"hook_number": 5},
+        {"hook_number": 6},
+        {"hook_number": 7},
+        {"hook_number": 8},
+    ])
+
+    return h
+
+def createDoors():
+    db.Doors.drop()
+    d: collection = db.Doors
+    d.create_index([("door_name", pymongo.ASCENDING), ("room_number", pymongo.ASCENDING),
+                        ("building_name", pymongo.ASCENDING)], unique=True)
+
+    dns = Utilities.get_doorname(db)
+    roomTuples = Utilities.get_room(db)
+    for r in roomTuples:
+        randoms = random.sample(range(0, len(dns)), 2)
+
+        for i in range(2):
+            insert_doors = d.insert_many([
+                {"door_name": DBRef("Doornames", dns[randoms[i]]),
+                 "room_number": DBRef("Rooms", r[0]),
+                 "building_name": DBRef("Buildings", r[1])}
+            ])
+
+    return d
+
+def createKeys():
+    db.Keys.drop()
+    k: collection = db.Keys
+    # k.create_index([("key_number",pymongo.ASCENDING),("key_id",pymongo.ASCENDING)])
+
+    insert_keys = k.insert_many([
+        {"key_number": DBRef("hooks", Utilities.get_hook(db, 1))},
+        {"key_number": DBRef("hooks", Utilities.get_hook(db, 2))},
+        {"key_number": DBRef("hooks", Utilities.get_hook(db, 3))},
+        {"key_number": DBRef("hooks", Utilities.get_hook(db, 4))},
+        {"key_number": DBRef("hooks", Utilities.get_hook(db, 5))},
+        {"key_number": DBRef("hooks", Utilities.get_hook(db, 6))},
+        {"key_number": DBRef("hooks", Utilities.get_hook(db, 7))},
+        {"key_number": DBRef("hooks", Utilities.get_hook(db, 8))},
+        {"key_number": DBRef("hooks", Utilities.get_hook(db, 1))},
+        {"key_number": DBRef("hooks", Utilities.get_hook(db, 2))},
+    ])
+
+    return k
 
 def createTables():
     buildings = createBuildings()
@@ -123,6 +193,6 @@ if __name__ == "__main__":
     db = setup()
     print('In main: ', db.list_collection_names())
 
-    buildings, rooms, employees, doornames = createTables()
+    buildings, rooms, employees, doornames, doors, hooks, keys = createTables()
 
     printTable(doors)
