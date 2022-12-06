@@ -23,11 +23,11 @@ def printTable(table : collection):
         printCollectionLine(line)
 
 def createBuildings():
-    buildings: collection = db.Buildings
+    db.Buildings.drop()
+    b: collection = db.Buildings
 
-    buildings.delete_many({})
-    buildings.create_index([("building_name", pymongo.ASCENDING)], unique=True)
-    buildings.insert_many([
+    b.create_index([("building_name", pymongo.ASCENDING)], unique=True)
+    b.insert_many([
         {"building_name": "VEC"},
         {"building_name": "ECS"},
         {"building_name": "HC"},
@@ -38,10 +38,11 @@ def createBuildings():
         {"building_name": "BMAC"}
     ])
 
-    return buildings
+    return b
 
 def createRooms():
-    rooms: collection = db.Rooms
+    db.Rooms.drop()
+    r: collection = db.Rooms
 
     room_validator = {
         'validator': {
@@ -70,45 +71,53 @@ def createRooms():
     }
 #    db.command('collMod', 'Rooms', **room_validator)
 
-    rooms.delete_many({})
     rooms.create_index([("building_name", pymongo.ASCENDING), ("room_number", pymongo.ASCENDING)], unique=True)
     buildingNames = []
-    buildings = db.Buildings
-    for line in buildings.find():
+    b = db.Buildings
+    for line in b.find():
         buildingNames.append(line["building_name"])
 
     for bn in buildingNames:
         randoms = random.sample(range(100, 460), 3)
-        rooms.insert_many([
+        r.insert_many([
             {"building_name": DBRef("Buildings", bn), "room_number" : int(randoms[0])},
             {"building_name": DBRef("Buildings", bn), "room_number" : int(randoms[1])},
             {"building_name": DBRef("Buildings", bn), "room_number" : int(randoms[2])}
         ])
 
-    return rooms
+    return r
 
-def createTables():
-    buildings = createBuildings()
-    rooms = createRooms()
-
-    return buildings, rooms
-
-
+def createEmployees():
     db.Employees.drop()
-    db.DoorNames.drop()
-    db.Hooks.drop()
-    db.Doors.drop()
-    db.Keys.drop()
-    #create the employees collection and populate it  with employees
-    employees = db.Employees
-    employees.create_index([("first_name", pymongo.ASCENDING), ("last_name", pymongo.ASCENDING)], unique=True)
-    insert_students = employees.insert_many([
+    e: collection = db.Employees
+    e.create_index([("first_name", pymongo.ASCENDING), ("last_name", pymongo.ASCENDING)], unique=True)
+    insert_students = e.insert_many([
         {"last_name": "Aguilar", "first_name": "Ed"},
         {"last_name": "Weiss", "first_name": "Cam"},
         {"last_name": "Ha", "first_name": "Jimmy"},
         {"last_name": "Lucena", "first_name": "Jeff"},
         {"last_name": "Brown", "first_name": "Dave"},
-        ])
+    ])
+
+    return e
+
+def createDoorNames():
+
+    return dn
+
+def createTables():
+    buildings = createBuildings()
+    rooms = createRooms()
+    employees = createEmployees()
+    doornames = createDoorNames()
+
+    return buildings, rooms, employees, doornames
+
+    db.DoorNames.drop()
+    db.Hooks.drop()
+    db.Doors.drop()
+    db.Keys.drop()
+
 
     #create the doornames collection and populate it  with data
     doornames = db.DoorNames
@@ -122,7 +131,7 @@ def createTables():
         {"door_name": "Back"},
         ])
 
-#create the hooks collection and populate it  with data
+    #create the hooks collection and populate it  with data
     hooks = db.Hooks
     hooks.create_index([("hook_number", pymongo.ASCENDING)], unique=True)
     insert_hooks = hooks.insert_many([
@@ -181,6 +190,6 @@ if __name__ == "__main__":
     db = setup()
     print('In main: ', db.list_collection_names())
 
-    buildings, rooms = createTables()
+    buildings, rooms, employees, doornames = createTables()
 
     printTable(rooms)
