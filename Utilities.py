@@ -16,9 +16,12 @@ class Utilities:
         return output
     """Return the room document for the given name."""
     @staticmethod
-    def get_room(db, room):
-        result = db.Rooms.find_one({"room_number": room})['room_number']
-        return result
+    def get_room(db):
+        output = []
+        result = db.Rooms.find()
+        for r in result:
+            output.append((r['room_number'], r['building_name']))
+        return output
 
     """Return the building document for the given name."""
     @staticmethod
