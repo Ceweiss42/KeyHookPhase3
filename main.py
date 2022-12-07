@@ -4,24 +4,34 @@ import pymongo
 from bson.dbref import DBRef
 import random
 from Utilities import Utilities
+import time
+
 
 def setup():
     client = MongoClient("mongodb+srv://group8:group8@keyhookphase3.hfewn3v.mongodb.net/?retryWrites=true&w=majority")
-    db = client.KeyHookPhase3
-    return db
+    mdb = client.KeyHookPhase3
+    return mdb
+
 
 def printCollectionLine(collectionLine):
     output = ""
     for k in collectionLine.keys():
         if k == "_id":
             continue
-        output += str(k) + ": " + str(collectionLine[k]) + "    "
+        if type(collectionLine[k]) == DBRef:
+            ref: DBRef = collectionLine[k]
+            paramSplit = str(ref).split(',')
+            output += ref.collection + "->" + str(k) + ": " + paramSplit[1][0:len(paramSplit[1]) - 1] + '     '
+        else:
+            output += str(k) + ": " + str(collectionLine[k]) + "    "
     print(output)
+
 
 def printTable(table : collection):
     lines = table.find()
     for line in lines:
         printCollectionLine(line)
+
 
 def createBuildings():
     db.Buildings.drop()
@@ -40,6 +50,7 @@ def createBuildings():
     ])
 
     return b
+
 
 def createRooms():
     db.Rooms.drop()
@@ -87,6 +98,7 @@ def createRooms():
 
     return r
 
+
 def createEmployees():
     db.Employees.drop()
     e: collection = db.Employees
@@ -100,6 +112,7 @@ def createEmployees():
     ])
 
     return e
+
 
 def createDoorNames():
     # create the doornames collection and populate it  with data
@@ -116,6 +129,7 @@ def createDoorNames():
     ])
 
     return dn
+
 
 def createHooks():
     db.Hooks.drop()
@@ -135,6 +149,7 @@ def createHooks():
 
     return h
 
+
 def createDoors():
     db.Doors.drop()
     d: collection = db.Doors
@@ -150,10 +165,11 @@ def createDoors():
             insert_doors = d.insert_many([
                 {"door_name": DBRef("Doornames", dns[randoms[i]]),
                  "room_number": DBRef("Rooms", r[0]),
-                 "building_name": DBRef("Buildings", r[1])}
+                 "building_name": r[1]}
             ])
 
     return d
+
 
 def createKeys():
     db.Keys.drop()
@@ -175,6 +191,7 @@ def createKeys():
 
     return k
 
+
 def createTables():
     buildings = createBuildings()
     rooms = createRooms()
@@ -188,11 +205,45 @@ def createTables():
     return buildings, rooms, employees, doornames, doors, hooks, keys
 
 
+def printOptions():
+    print("0. Exit")
+    print("1. Print Table(s)")
+    print("2. Something Else")
+
+
+def runPrintOptions():
+    printTable(rooms)
+
+
+def menu():
+    print("------------------------------")
+    choice = -9
+    while choice != 0:
+        try:
+            printOptions()
+            choice = int(input("What would you like to do? "))
+            match choice:
+                case 0:
+                    break
+                case 1:
+                    runPrintOptions()
+                    continue
+                case _:
+                    print("Input not recognized")
+                    menu()
+                    break
+
+        except all:
+            print("Input not recognized")
+            menu()
+
 
 if __name__ == "__main__":
     db = setup()
-    print('In main: ', db.list_collection_names())
 
     buildings, rooms, employees, doornames, doors, hooks, keys = createTables()
+    menu()
 
-    printTable(doors)
+    print("Closing the program...")
+    time.sleep(2)
+    exit()
