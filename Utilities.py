@@ -13,6 +13,16 @@ class Utilities:
         list = Utilities.get_room(db)
         return list[random.randint(0, len(list))]
 
+
+    @staticmethod
+    def getFirstKeyByDoor(db, door):
+
+        allHD = db.HookDoors.find()
+        for hd in allHD:
+            if (hd['building_name'].id == door[1].id
+                and hd['room_number'].id == door[0].id
+                and hd['door_name'].id == door[2].id):
+                return hd['hook_number']
     @staticmethod
     def getRandomHook(db):
         out = []

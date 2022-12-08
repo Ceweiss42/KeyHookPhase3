@@ -160,7 +160,7 @@ def createRequests():
                       ("door_name", pymongo.ASCENDING)], unique=False)
     allDoors = Utilities.getDoors(db)
     random.shuffle(allDoors)
-    for i in range(10):
+    for _ in range(20):
         door = allDoors.pop()
         inserted_requests = req.insert_many([
             {
@@ -169,7 +169,7 @@ def createRequests():
                 "building_name": door[1],
                 "employee_id": DBRef("Employees", Utilities.getRandomEmployeeID(db)),
                 "requested_date": datetime.datetime.now(),
-                "key_number": DBRef("Keys", "_______"),
+                "key_number": Utilities.getFirstKeyByDoor(db, door),
                 "loaned_date": None,
                 "door_name": door[2]
             }
@@ -224,7 +224,78 @@ def createHookDoors():
 
     return hd
 
+def updateRequestLoanDate(r):
+    db.Requests.replace_one({'_id': r['_id']},
+                            {
+                                "request_id": r["request_id"],
+                                "room_number": r['room_number'],
+                                "building_name": r['building_name'],
+                                "employee_id": r['employee_id'],
+                                "requested_date": r['requested_date'],
+                                "key_number": r['key_number'],
+                                "loaned_date": datetime.datetime.now(),
+                                "door_name": r['door_name']
+                            })
 
+def createLossKeys():
+    db.LossKeys.drop()
+    lk: collection = db.LossKeys
+    lk.create_index([("request_id", pymongo.ASCENDING)], unique=True)
+    lk.create_index([("loss_date", pymongo.ASCENDING)], unique=False)
+
+    length = 0
+
+    reqsList = []
+
+    for x in db.Requests.find():
+        length += 1
+        reqsList.append(x)
+
+    randoms = random.sample(range(0, length), 5)
+
+    for r in reqsList:
+        if r['request_id'] in randoms:
+            updateRequestLoanDate(r)
+
+    for i in randoms:
+        inserted_LKs = lk.insert_many([
+            {
+                "request_id": DBRef("Requests", reqsList[i]['request_id']),
+                "loss_date": datetime.datetime.now()
+            }
+        ])
+
+    return lk
+
+def createReturnKeys():
+    db.ReturnKeys.drop()
+    rk: collection = db.ReturnKeys
+    rk.create_index([("request_id", pymongo.ASCENDING)], unique=True)
+    rk.create_index([("return_date", pymongo.ASCENDING)], unique=False)
+
+    length = 0
+
+    reqsList = []
+
+    for x in db.Requests.find({'loaned_date': None}):
+        length += 1
+        reqsList.append(x)
+
+    randoms = random.sample(range(0, length), 5)
+
+    for r in reqsList:
+        if r['request_id'] in randoms:
+            updateRequestLoanDate(r)
+
+    for i in randoms:
+        inserted_RKs = rk.insert_many([
+            {
+                "request_id": DBRef("Requests", reqsList[i]['request_id']),
+                "return_date": datetime.datetime.now()
+            }
+        ])
+
+    return rk
 
 def createKeys():
     db.Keys.drop()
@@ -257,50 +328,85 @@ def createTables():
     keys = createKeys()
     hookdoors = createHookDoors()
     requests = createRequests()
+    losskeys = createLossKeys()
+    returnkeys = createReturnKeys()
 
 
-    return buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors, requests
+    return buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors, requests, losskeys, returnkeys
 
+def createNewKeySequence():
+    print("All Hooks:")
+    printTable(db.Hooks)
+    print("Please enter a Hook Number to create a new Key For:")
+    try:
+        choice = int(input())
+        hook = db.Hooks.find_one({"hook_number": choice})
+        if hook:
+            db.Keys.insert_many([{
+                "key_number": DBRef("hooks", choice)
+            }])
+            print("Successfully created a new Key!")
+            print("New Keys Table:")
+            printTable(keys)
+        else:
+            print("No hook found for hook number", str(choice))
 
+    except Exception as e:
+        print("Could not understand user input. Returning to main Menu\n\n")
 def printOptions():
     print("0. Exit")
     print("1. Print Table(s)")
-    print("2. Something Else")
+    print("2. Create a new Key")
+    print("3. Request Access to a room")
+    print("4. Issue a key (Update Key Request)")
+    print("5. ")
 
 
-def runPrintOptions():
-    pass
+def runPrintTable():
+
+    for i in range(len(tableList)):
+        print(str(i) + ". " + str(tableList[i].name))
+
+    try:
+        choice = int(input("What table would you like to print?"))
+        printTable(tableList[choice])
+        print("\n\n")
+
+    except Exception as e:
+        print("Could not understand input. please try again")
+        runPrintTable()
 
 
 def menu():
-    print("------------------------------")
+
     choice = -9
     while choice != 0:
         try:
+            print("------------------------------")
             printOptions()
             choice = int(input("What would you like to do? "))
-            match choice:
-                case 0:
-                    break
-                case 1:
-                    runPrintOptions()
-                    continue
-                case _:
-                    print("Input not recognized")
-                    menu()
-                    break
+            if choice == 0:
+                return None
+
+            elif choice == 1:
+                runPrintTable()
+
+            elif choice == 2:
+                createNewKeySequence()
+            else:
+                print("Input not on the list")
 
         except Exception as e:
+            print(e)
             print("Input not recognized")
-            menu()
 
 
 if __name__ == "__main__":
     db = setup()
 
-    buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors, requests = createTables()
+    buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors, requests, losskeys, returnkeys = createTables()
 
-    printTable(hookdoors)
+    tableList = [buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors, requests, losskeys, returnkeys]
     menu()
 
     print("Closing the program...")
