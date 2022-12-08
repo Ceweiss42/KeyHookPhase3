@@ -353,6 +353,31 @@ def createNewKeySequence():
 
     except Exception as e:
         print("Could not understand user input. Returning to main Menu\n\n")
+
+def requestAccessToRoom():
+    user_id = int(input("Please enter your ID\n"))
+
+    print("All Rooms")
+    printTable(db.Rooms)
+    print("Please enter a Room that you want access to: ")
+    try:
+        choice = int(input())
+        room = db.Hooks.find_one({"room_number": choice})
+        #check if they have access to room
+        if room:
+            db.Keys.insert_many([{
+                "key_number": DBRef("hooks", choice)
+            }])
+            print("Successfully created a new Key!")
+            print("New Keys Table:")
+            #print out the rooms you have access to
+            printTable(keys)
+        else:
+            print("Sorry you already have access to room ", str(choice))
+
+    except Exception as e:
+        print("Could not understand user input. Returning to main Menu\n\n")
+
 def printOptions():
     print("0. Exit")
     print("1. Print Table(s)")
@@ -393,6 +418,8 @@ def menu():
 
             elif choice == 2:
                 createNewKeySequence()
+            elif choice == 3:
+
             else:
                 print("Input not on the list")
 
