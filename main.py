@@ -19,7 +19,8 @@ def printCollectionLine(collectionLine):
     for k in collectionLine.keys():
         if k == "_id":
             continue
-
+        if type(collectionLine[k]) == DBRef:
+            output += str(k) + ": " + str(collectionLine[k].id) + "    "
         else:
             output += str(k) + ": " + str(collectionLine[k]) + "    "
     print(output)
@@ -155,19 +156,22 @@ def createRequests():
     req.create_index([("request_id", pymongo.ASCENDING)], unique=True)
     req.create_index([("room_number", pymongo.ASCENDING), ("building_name", pymongo.ASCENDING),
                       ("employee_id", pymongo.ASCENDING), ("requested_date", pymongo.ASCENDING),
-                      ("key_number", pymongo.ASCENDING), ("loaned_date", pymongo.ASCENDING)], unique=False)
-
+                      ("key_number", pymongo.ASCENDING), ("loaned_date", pymongo.ASCENDING),
+                      ("door_name", pymongo.ASCENDING)], unique=False)
+    allDoors = Utilities.getDoors(db)
+    random.shuffle(allDoors)
     for i in range(10):
-        wantedDoor = Utilities.getDoors(db)
+        door = allDoors.pop()
         inserted_requests = req.insert_many([
             {
                 "request_id": Utilities.getNextRequestID(db),
-                "room_number": DBRef("Rooms", randomRoom[0]),
-                "building_name": DBRef("Rooms", randomRoom[1]),
+                "room_number": door[0],
+                "building_name": door[1],
                 "employee_id": DBRef("Employees", Utilities.getRandomEmployeeID(db)),
                 "requested_date": datetime.datetime.now(),
                 "key_number": DBRef("Keys", "_______"),
-                "loaned_date": None
+                "loaned_date": None,
+                "door_name": door[2]
             }
         ])
 
@@ -187,7 +191,7 @@ def createDoors():
 
         for i in range(2):
             insert_doors = d.insert_many([
-                {"door_name": DBRef("Doornames", dns[randoms[i]]),
+                {"door_name": DBRef("DoorNames", dns[randoms[i]]),
                  "room_number": DBRef("Rooms", r[0]),
                  "building_name": r[1]}
             ])
@@ -252,9 +256,10 @@ def createTables():
     doors = createDoors()
     keys = createKeys()
     hookdoors = createHookDoors()
+    requests = createRequests()
 
 
-    return buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors
+    return buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors, requests
 
 
 def printOptions():
@@ -264,7 +269,7 @@ def printOptions():
 
 
 def runPrintOptions():
-    printTable(hookdoors)
+    pass
 
 
 def menu():
@@ -285,7 +290,7 @@ def menu():
                     menu()
                     break
 
-        except all:
+        except Exception as e:
             print("Input not recognized")
             menu()
 
@@ -293,7 +298,9 @@ def menu():
 if __name__ == "__main__":
     db = setup()
 
-    buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors = createTables()
+    buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors, requests = createTables()
+
+    printTable(hookdoors)
     menu()
 
     print("Closing the program...")

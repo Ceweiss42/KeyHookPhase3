@@ -26,7 +26,7 @@ class Utilities:
         out = []
         doors = db.Doors.find()
         for d in doors:
-            out.append((d["room_number"], d["building_name"], d["door_name"]))
+            out.append([d["room_number"], d["building_name"], d["door_name"]])
         return out
 
     @staticmethod
@@ -35,13 +35,20 @@ class Utilities:
 
         ids = []
         for e in employees:
-            ids.append[e["employee_id"]]
+            id = int(e["employee_id"])
+            ids.append((id))
 
-        return 1
+        r = random.randint(0, len(ids) - 1)
+        return ids[r]
     """Get the next available request id """
     @staticmethod
     def getNextRequestID(db):
-        return len(db.Requests.find())
+        out = 0
+        res = db.Requests.find()
+        for _ in res:
+            out += 1
+
+        return out
     """Return the size document for the given name."""
     @staticmethod
     def get_doorname(db):
