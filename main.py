@@ -5,6 +5,7 @@ from bson.dbref import DBRef
 import random
 from Utilities import Utilities
 import time
+import datetime
 
 
 def setup():
@@ -18,10 +19,7 @@ def printCollectionLine(collectionLine):
     for k in collectionLine.keys():
         if k == "_id":
             continue
-        if type(collectionLine[k]) == DBRef:
-            ref: DBRef = collectionLine[k]
-            paramSplit = str(ref).split(',')
-            output += ref.collection + "->" + str(k) + ": " + paramSplit[1][0:len(paramSplit[1]) - 1] + '     '
+
         else:
             output += str(k) + ": " + str(collectionLine[k]) + "    "
     print(output)
@@ -102,13 +100,14 @@ def createRooms():
 def createEmployees():
     db.Employees.drop()
     e: collection = db.Employees
-    e.create_index([("first_name", pymongo.ASCENDING), ("last_name", pymongo.ASCENDING)], unique=True)
+    e.create_index([("first_name", pymongo.ASCENDING), ("last_name", pymongo.ASCENDING),
+                    ("employee_id", pymongo.ASCENDING)], unique=True)
     insert_students = e.insert_many([
-        {"last_name": "Aguilar", "first_name": "Ed"},
-        {"last_name": "Weiss", "first_name": "Cam"},
-        {"last_name": "Ha", "first_name": "Jimmy"},
-        {"last_name": "Lucena", "first_name": "Jeff"},
-        {"last_name": "Brown", "first_name": "Dave"},
+        {"last_name": "Aguilar", "first_name": "Ed", "employee_id": 1},
+        {"last_name": "Weiss", "first_name": "Cam", "employee_id": 2},
+        {"last_name": "Ha", "first_name": "Jimmy", "employee_id": 3},
+        {"last_name": "Lucena", "first_name": "Jeff", "employee_id": 4},
+        {"last_name": "Brown", "first_name": "Dave", "employee_id": 5}
     ])
 
     return e
@@ -149,6 +148,31 @@ def createHooks():
 
     return h
 
+def createRequests():
+    db.Requests.drop()
+    req: collection = db.Requests
+
+    req.create_index([("request_id", pymongo.ASCENDING)], unique=True)
+    req.create_index([("room_number", pymongo.ASCENDING), ("building_name", pymongo.ASCENDING),
+                      ("employee_id", pymongo.ASCENDING), ("requested_date", pymongo.ASCENDING),
+                      ("key_number", pymongo.ASCENDING), ("loaned_date", pymongo.ASCENDING)], unique=False)
+
+    for i in range(10):
+        wantedDoor = Utilities.getDoors(db)
+        inserted_requests = req.insert_many([
+            {
+                "request_id": Utilities.getNextRequestID(db),
+                "room_number": DBRef("Rooms", randomRoom[0]),
+                "building_name": DBRef("Rooms", randomRoom[1]),
+                "employee_id": DBRef("Employees", Utilities.getRandomEmployeeID(db)),
+                "requested_date": datetime.datetime.now(),
+                "key_number": DBRef("Keys", "_______"),
+                "loaned_date": None
+            }
+        ])
+
+    return req
+
 
 def createDoors():
     db.Doors.drop()
@@ -170,11 +194,38 @@ def createDoors():
 
     return d
 
+def createHookDoors():
+    '''
+    door_name = Column('door_name', String(20), ForeignKey('doors.door_name'), nullable=False, primary_key=True)
+    room_number = Column('room_number', Integer, ForeignKey('rooms.room_number'), nullable=False, primary_key=True)
+    building_name = Column('building_name', String(40), ForeignKey('doors.building_name'), nullable=False,
+                           primary_key=True)
+    hook_number = Column('hook_number', Integer, ForeignKey('hooks.hook_number'), nullable=False, primary_key=True)
+    '''
+    db.HookDoors.drop()
+    hd: collection = db.HookDoors
+    hd.create_index([("door_name", pymongo.ASCENDING), ("room_number", pymongo.ASCENDING),
+                     ("building_name", pymongo.ASCENDING), ("hook_number", pymongo.ASCENDING)], unique=True)
+
+    everyDoor = Utilities.getDoors(db)
+    for door in everyDoor:
+        inserted_HookDoors = hd.insert_many([
+            {
+                "door_name":  door[2],
+                "room_number": door[0],
+                "building_name": door[1],
+                "hook_number": DBRef("Hooks", Utilities.getRandomHook(db))
+            }
+        ])
+
+    return hd
+
+
 
 def createKeys():
     db.Keys.drop()
     k: collection = db.Keys
-    # k.create_index([("key_number",pymongo.ASCENDING),("key_id",pymongo.ASCENDING)])
+    k.create_index([("key_number", pymongo.ASCENDING)])
 
     insert_keys = k.insert_many([
         {"key_number": DBRef("hooks", Utilities.get_hook(db, 1))},
@@ -200,9 +251,10 @@ def createTables():
     hooks = createHooks()
     doors = createDoors()
     keys = createKeys()
+    hookdoors = createHookDoors()
 
 
-    return buildings, rooms, employees, doornames, doors, hooks, keys
+    return buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors
 
 
 def printOptions():
@@ -212,7 +264,7 @@ def printOptions():
 
 
 def runPrintOptions():
-    printTable(rooms)
+    printTable(hookdoors)
 
 
 def menu():
@@ -241,7 +293,7 @@ def menu():
 if __name__ == "__main__":
     db = setup()
 
-    buildings, rooms, employees, doornames, doors, hooks, keys = createTables()
+    buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors = createTables()
     menu()
 
     print("Closing the program...")
