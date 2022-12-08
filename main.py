@@ -354,28 +354,116 @@ def createNewKeySequence():
     except Exception as e:
         print("Could not understand user input. Returning to main Menu\n\n")
 
+def getAllRoomsIHaveAccessTo(id):
+    me = db.Employees.find_one({"employee_id": id})
+    if not me:
+        print("No user found")
+        return
+
+    correctRequests = []
+    allMyRequests = db.Requests.find()
+    for req in allMyRequests:
+        if int(req["employee_id"].id) == id and req["loaned_date"] is not None:
+            correctRequests.append(req)
+
+    #here
+    lks = db.LossKeys.find()
+    rks = db.ReturnKeys.find()
+    for r in correctRequests:
+        for lk in lks:
+            if r["request_id"] == int(lk["request_id"].id):
+                correctRequests.remove(r)
+                break
+
+        for rk in rks:
+            if r["request_id"] == int(rk["request_id"].id):
+                correctRequests.remove(r)
+                break
+
+    #now we have all requests that we currently have a key for
+    hooksList = []
+    for x in correctRequests:
+        hook = db.Hooks.find_one({"hook_number": int(x["key_number"].id)})
+        if hook not in hooksList:
+            hooksList.append(hook)
+
+    access = []
+
+    hds = db.HookDoors.find()
+    for hd in hds:
+        ac = False
+        for h in hooksList:
+            if hd["hook_number"].id == h["hook_number"]:
+                ac = True
+
+        if not ac:
+            room = db.Rooms.find_one({"building_name": hd["building_name"].id,
+                                      "room_number": hd["room_number"].id})
+            if room not in access:
+                access.append(room)
+
+    #here
+
+    return access
+
+
 def requestAccessToRoom():
-    user_id = int(input("Please enter your ID\n"))
-
-    print("All Rooms")
-    printTable(db.Rooms)
-    print("Please enter a Room that you want access to: ")
     try:
-        choice = int(input())
-        room = db.Hooks.find_one({"room_number": choice})
-        #check if they have access to room
-        if room:
-            db.Keys.insert_many([{
-                "key_number": DBRef("hooks", choice)
-            }])
-            print("Successfully created a new Key!")
-            print("New Keys Table:")
-            #print out the rooms you have access to
-            printTable(keys)
-        else:
-            print("Sorry you already have access to room ", str(choice))
+        user_id = int(input("Please enter your ID\n"))
+        emp = db.Employees.find_one({"employee_id": user_id})
+        if emp:
+            count = 0
+            roomsList = []
+            allRooms = db.Rooms.find()
+            for r in allRooms:
+                print(str(count), ". ", end="")
+                printCollectionLine(r)
+                roomsList.append(r)
+                count += 1
 
-    except Exception as e:
+
+            chosenRoom = roomsList[int(input("Please enter the index of the wanted room: "))]
+            if chosenRoom:
+                if chosenRoom in getAllRoomsIHaveAccessTo(user_id):
+                    print("You already have access to this room!")
+
+                else:
+                    doorsInBuilding = db.Doors.find({"building_name": chosenRoom["building_name"]})
+                    door = None
+                    for d in doorsInBuilding:
+                        if int(d["room_number"].id) == chosenRoom["room_number"]:
+                            door = d
+                            break
+
+                    key_number = db.HookDoors.find_one({"building_name": door["building_name"],
+                                                        "room_number": door["room_number"],
+                                                        "door_name": door["door_name"]})["hook_number"]
+
+                    print(door)
+                    db.Requests.insert_many([
+                        {
+                            "request_id": Utilities.getNextRequestID(db),
+                            "room_number": DBRef("Room", chosenRoom["room_number"]),
+                            "building_name": chosenRoom["building_name"],
+                            "employee_id": DBRef("Employees", user_id),
+                            "requested_date": datetime.datetime.now(),
+                            "key_number": key_number,
+                            "loaned_date": None,
+                            "door_name": door["door_name"]
+                        }
+                    ])
+
+                    print("Successfully submitted a request!")
+
+
+            else:
+                print("There is no room at the given index! Returning to main menu.")
+
+        else:
+            print("No employee found with ID", user_id)
+
+    except ValueError as e:
+        print("EXCEPTION", e)
         print("Could not understand user input. Returning to main Menu\n\n")
 
 def printOptions():
@@ -419,11 +507,11 @@ def menu():
             elif choice == 2:
                 createNewKeySequence()
             elif choice == 3:
-
+                requestAccessToRoom()
             else:
                 print("Input not on the list")
 
-        except Exception as e:
+        except ValueError as e:
             print(e)
             print("Input not recognized")
 

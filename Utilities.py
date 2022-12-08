@@ -23,6 +23,8 @@ class Utilities:
                 and hd['room_number'].id == door[0].id
                 and hd['door_name'].id == door[2].id):
                 return hd['hook_number']
+        return None
+
     @staticmethod
     def getRandomHook(db):
         out = []
