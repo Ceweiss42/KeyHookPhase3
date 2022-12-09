@@ -477,7 +477,7 @@ def printOptions():
     print("2. Create a new Key")
     print("3. Request Access to a room")
     print("4. Issue a key (Update Key Request)")
-    print("5. ")
+    print("5. Delete a key")
 
 
 def runPrintTable():
@@ -493,6 +493,21 @@ def runPrintTable():
     except Exception as e:
         print("Could not understand input. please try again")
         runPrintTable()
+
+def deleteKey():
+    keysList = []
+    allKeys = db.Keys.find()
+    count = 0
+    for r in allKeys:
+        print(str(count), ". ", end="")
+        printCollectionLine(r)
+        keysList.append(r)
+        count += 1
+
+    chosenkey = keysList[int(input("Please enter the index of the key you want to delete: "))]
+    deletedKey = db.Keys.find(DBRef("Keys", chosenkey["_id"]))
+    print(deletedKey)
+
 
 
 
@@ -516,6 +531,8 @@ def menu():
                 requestAccessToRoom()
             elif choice == 4:
                 issueKey()
+            elif choice == 5:
+                deleteKey()
             else:
                 print("Input not on the list")
 
