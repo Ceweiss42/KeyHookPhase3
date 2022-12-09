@@ -8,10 +8,12 @@ import time
 import datetime
 
 
+
 def setup():
     client = MongoClient("mongodb+srv://group8:group8@keyhookphase3.hfewn3v.mongodb.net/?retryWrites=true&w=majority")
     mdb = client.KeyHookPhase3
     return mdb
+
 
 
 def printCollectionLine(collectionLine):
@@ -466,6 +468,9 @@ def requestAccessToRoom():
         print("EXCEPTION", e)
         print("Could not understand user input. Returning to main Menu\n\n")
 
+
+
+
 def printOptions():
     print("0. Exit")
     print("1. Print Table(s)")
@@ -490,6 +495,7 @@ def runPrintTable():
         runPrintTable()
 
 
+
 def menu():
 
     choice = -9
@@ -508,12 +514,15 @@ def menu():
                 createNewKeySequence()
             elif choice == 3:
                 requestAccessToRoom()
+            elif choice == 4:
+                issueKey()
             else:
                 print("Input not on the list")
 
         except ValueError as e:
             print(e)
             print("Input not recognized")
+
 
 
 if __name__ == "__main__":
