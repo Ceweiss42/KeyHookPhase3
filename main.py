@@ -468,17 +468,181 @@ def requestAccessToRoom():
         print("EXCEPTION", e)
         print("Could not understand user input. Returning to main Menu\n\n")
 
+def issueKey():
+    print("Welcome to the issuing portal. First, select an employee")
+    emps = db.Employees.find()
+    for e in emps:
+        print(printCollectionLine(e))
+    try:
+        choice = int(input("Please enter the employee ID: "))
+        chosenEmployee = db.Employees.find_one({"employee_id": choice})
+
+        if not chosenEmployee:
+            print("Uh oh, something broke! No employee given from DB")
+            return
+
+        myReqs = []
+        notGiven = db.Requests.find({"loaned_date": None})
+        for r in notGiven:
+            if r['employee_id'].id == chosenEmployee["employee_id"]:
+                myReqs.append(r)
+
+        for r in myReqs:
+            printCollectionLine(r)
+
+        req = db.Requests.find_one({"request_id": int(input("please enter request id: "))})
+        if not req:
+            print("no recognized request given")
+            return
+
+        updateRequestLoanDate(req)
+
+
+    except Exception as e:
+        print("Something went wrong!")
+        return
+    '''try:
+        user_id = int(input("Please enter your ID\n"))
+        emp = db.Employees.find_one({"employee_id": user_id})
+        if emp:
+            print("do the code")
+            #1.take the employee id and print out all of their requests
+            #2.ask them which key do you want to issue
+            #3.update the loaned out date
+            #4.print it out and say that the key was issued successfully
+
+            #this prints out all of the requests for the employee
+            requestList = []
+            allRequest = db.Requests.find()
+            for x in allRequest:
+                emp_request = db.Requests.find({"employee_id": int(x["employee_id"].id)})
+                if emp_request not in requestList:
+                    requestList.append(emp_request) #created a list that holds all of the requests made by the emp
+                print(emp_request) #having trouble printing it out
+
+            chosenRequest = requestList[int(input("Please enter which key you want to issue : "))]
+
+            if chosenRequest:
+                if chosenRequest in requestList:
+                    print("You already have access to this key! ")
+                #continue on from here
+            else:
+                print("Sorry there is no key of that number which can be issued out. ")
+
+
+
+
+        else:
+            print("Sorry there is no employee with that idea.")
+    except ValueError as e:
+        print("Exception", e)
+        print("The input you tried giving is of the wrong type. Please try again\n\n")'''
+
+def reportLossKey():
+    try:
+        user_id = int(input("Please enter your ID\n"))
+        emp = db.Employees.find_one({"employee_id": user_id})
+        if emp:
+            myReqsList = []
+            allReqs = db.Requests.find()
+            for r in allReqs:
+                if int(r["employee_id"].id) == user_id and r["loaned_date"]:
+                    myReqsList.append(r)
+
+            for r in myReqsList:
+                returns = db.ReturnKeys.find()
+                for ret in returns:
+                    if int(ret["request_id"].id) == r["request_id"]:
+                        # we have returned this one
+                        myReqsList.remove(r)
+
+                losses = db.LossKeys.find()
+                for l in losses:
+                    if int(l["request_id"].id) == r["request_id"]:
+                        # we have returned this one
+                        myReqsList.remove(r)
+
+            # now myReqsList contains only the ones that we currently have
+            for r in myReqsList:
+                printCollectionLine(r)
+
+            if len(myReqsList) > 0:
+
+                lossKey = int(input("Which of these keys was lost\n"))
+                db.LossKeys.insert_one({"request_id": DBRef("Requests", lossKey), "loss_date": datetime.datetime.now()})
+                print("The key has been reported lost")
+            else:
+                print("You cannot report a loss key since you have none!")
+        else:
+            print("Sorry you don't exist :( ")
+    except ValueError as e:
+        print("Exception", e)
+        print("The input you tried giving is of the wrong type. Please try again\n\n")
+
+
+def addNewDoor():
+    roomsList = []
+    count = 0
+    for r in db.Rooms.find():
+        roomsList.append(r)
+        print(str(count), "  ", end = "")
+        printCollectionLine(r)
+        count += 1
+
+    allDoorNames = []
+    for dn in db.DoorNames.find():
+        allDoorNames.append(dn["door_name"])
+
+
+    try:
+        roomChoice = roomsList[int(input("please enter the index of wanted room"))]
+
+        roomDoors = db.Doors.find({"building_name": roomChoice["building_name"]})
+        for rd in roomDoors:
+            if int(rd["room_number"].id) == roomChoice["room_number"]:
+                allDoorNames.remove(rd["door_name"].id)
+
+        db.Doors.insert_one({
+            "door_name": DBRef("DoorNames", allDoorNames[0]),
+            "room_number": DBRef("Rooms", roomChoice["room_number"]),
+            "building_name": roomChoice["building_name"]
+
+        })
+
+        print("Door added")
+    except Exception as e:
+        print("Cannot add a new door, all door names taken!")
+
+# def addNewDoor():
+#     buildingsList = []
+#     allBuildings = db.Buildings.find()
+#     count = 0
+#     for r in allBuildings:
+#         print(str(count), ". ", end="")
+#         printCollectionLine(r)
+#         buildingsList.append(r)
+#         count += 1
+#
+#     req_Building = buildingsList[int(input("Please select the building you would like to add a new door too: "))]
+#     # db.Keys.delete_one({"_id": chosenkey["_id"]})
+#     # print("The key has been deleted")
+#     db.
 
 
 
 def printOptions():
-    print("0. Exit")
-    print("1. Print Table(s)")
-    print("2. Create a new Key")
-    print("3. Request Access to a room")
-    print("4. Issue a key (Update Key Request)")
-    print("5. Delete a key")
-    print("6. Delete an Employee")
+    print("0. Exit")                                             #
+    print("1. Print Table(s)")                                   #
+    print("2. Create a new Key")                                 #
+    print("3. Request Access to a room")                         #
+    print("4. Issue a key (Update Key Request)")                 #
+    print("5. Report lost key")                                  #
+    print("6. Rooms that an employee can enter")
+    print("7. Delete a key")                                     #
+    print("8. Delete an employee")                               #
+    print("9. Add a new door")
+    print("10. Update access request to move it to a new employee")
+    print("11. Employees who can enter a room")                  #
 
 
 def runPrintTable():
@@ -573,8 +737,12 @@ def menu():
             elif choice == 4:
                 issueKey()
             elif choice == 5:
-                deleteKey()
+                reportLossKey()
             elif choice == 6:
+                roomsThatICanEnter()
+            elif choice == 7:
+                deleteKey()
+            elif choice == 8:
                 deleteEmployee()
             else:
                 print("Input not on the list")
@@ -586,6 +754,7 @@ def menu():
 
 
 if __name__ == "__main__":
+
     db = setup()
 
     buildings, rooms, employees, doornames, doors, hooks, keys, hookdoors, requests, losskeys, returnkeys = createTables()
