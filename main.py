@@ -478,6 +478,7 @@ def printOptions():
     print("3. Request Access to a room")
     print("4. Issue a key (Update Key Request)")
     print("5. Delete a key")
+    print("6. Delete an Employee")
 
 
 def runPrintTable():
@@ -505,10 +506,50 @@ def deleteKey():
         count += 1
 
     chosenkey = keysList[int(input("Please enter the index of the key you want to delete: "))]
-    deletedKey = db.Keys.find(DBRef("Keys", chosenkey["_id"]))
-    print(deletedKey)
+    db.Keys.delete_one({"_id": chosenkey["_id"]})
+    print("The key has been deleted")
+
+    keysList = []
+    allKeys = db.Keys.find()
+    count = 0
+    for r in allKeys:
+        print(str(count), ". ", end="")
+        printCollectionLine(r)
+        keysList.append(r)
+        count += 1
 
 
+
+
+
+    #result = db.Keys.find_one({"key_number": key})['key_number']
+    #having issues retrieving the key object the user selects
+    #db.Keys.remove([{"_id": DBRef("keys", k)}])
+    # "room_number": DBRef("Room", chosenRoom["room_number"]),
+
+
+def deleteEmployee():
+    employeeList = []
+    allEmployees = db.Employees.find()
+    count = 0
+    for r in allEmployees:
+        print(str(count), ". ", end="")
+        printCollectionLine(r)
+        employeeList.append(r)
+        count += 1
+
+    chosenemployee = employeeList[int(input("Please enter the index of the employee you want to delete: "))]
+    db.Employees.delete_one({"_id": chosenemployee["_id"]})
+    print("The employee has been deleted\n\n")
+
+    employeeList = []
+    allEmployees = db.Employees.find()
+    count = 0
+    for r in allEmployees:
+        print(str(count), ". ", end="")
+        printCollectionLine(r)
+        employeeList.append(r)
+        count += 1
 
 
 def menu():
@@ -533,6 +574,8 @@ def menu():
                 issueKey()
             elif choice == 5:
                 deleteKey()
+            elif choice == 6:
+                deleteEmployee()
             else:
                 print("Input not on the list")
 
