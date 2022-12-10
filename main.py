@@ -245,28 +245,6 @@ def createLossKeys():
     lk.create_index([("request_id", pymongo.ASCENDING)], unique=True)
     lk.create_index([("loss_date", pymongo.ASCENDING)], unique=False)
 
-    length = 0
-
-    reqsList = []
-
-    for x in db.Requests.find():
-        length += 1
-        reqsList.append(x)
-
-    randoms = random.sample(range(0, length), 5)
-
-    for r in reqsList:
-        if r['request_id'] in randoms:
-            updateRequestLoanDate(r)
-
-    for i in randoms:
-        inserted_LKs = lk.insert_many([
-            {
-                "request_id": DBRef("Requests", reqsList[i]['request_id']),
-                "loss_date": datetime.datetime.now()
-            }
-        ])
-
     return lk
 
 def createReturnKeys():
@@ -683,13 +661,33 @@ def deleteKey():
         count += 1
 
 
+def roomsThatICanEnter():
+    print("yeah we didnt do this one, points would be cool though")
 
+def updateRequest():
+    #change request to a new employee
+    try:
+        empA = int(input("enter employee id of current request"))
+        for r in db.Requests.find():
+            if int(r["employee_id"].id) == empA:
+                printCollectionLine(r)
 
+        reqSelected = db.Requests.find_one({"request_id": int(input("Enter Request ID: "))})
+        db.Requests.replace_one({'_id': reqSelected['_id']},
+                                {
+                                    "request_id": reqSelected["request_id"],
+                                    "room_number": reqSelected['room_number'],
+                                    "building_name": reqSelected['building_name'],
+                                    "employee_id": int(input("Who do you want to hold this request? (Enter a new Employee ID)")),
+                                    "requested_date": reqSelected['requested_date'],
+                                    "key_number": reqSelected['key_number'],
+                                    "loaned_date": None,
+                                    "door_name": reqSelected['door_name']
+                                })
 
-    #result = db.Keys.find_one({"key_number": key})['key_number']
-    #having issues retrieving the key object the user selects
-    #db.Keys.remove([{"_id": DBRef("keys", k)}])
-    # "room_number": DBRef("Room", chosenRoom["room_number"]),
+    except Exception as e:
+        print(e)
+        print("My brother in christ, enter a good and proper value")
 
 
 def deleteEmployee():
@@ -714,6 +712,75 @@ def deleteEmployee():
         printCollectionLine(r)
         employeeList.append(r)
         count += 1
+
+def listAllWhoCanEnter():
+    print("Welcome, please select a room!")
+    roomsList = []
+    count = 0
+    allRooms = db.Rooms.find()
+    for a in allRooms:
+        roomsList.append(a)
+
+    for r in roomsList:
+        print(str(count) + ". ", end = "")
+        printCollectionLine(r)
+        count += 1
+
+    try:
+        roomChoice = roomsList[int(input("Please enter the index of wanted room"))]
+        print("This is your selected room:")
+        printCollectionLine(roomChoice)
+        allHD = db.HookDoors.find()
+        myDoors = []
+        for hd in allHD:
+            if hd["building_name"].id == roomChoice["building_name"].id and int(hd["room_number"].id) == roomChoice["room_number"]:
+                myDoors.append(hd)
+
+        people = []
+        for hd in myDoors:
+            #get all people who have a key with the same number!
+
+            emps = db.Employees.find()
+            for e in emps:
+                user_id = e["employee_id"]
+                myReqsList = []
+                allReqs = db.Requests.find()
+                for r in allReqs:
+                    if int(r["employee_id"].id) == user_id :
+                        #user made the request
+                        if r["loaned_date"] is not None:
+                            if r["building_name"].id == hd["building_name"].id:
+                                if int(r["room_number"].id) == int(hd["room_number"].id):
+                                    if r["door_name"].id == hd["door_name"].id:
+                                        myReqsList.append(r)
+                if len(myReqsList) > 0:
+                    for r in myReqsList:
+                        returns = db.ReturnKeys.find()
+                        for ret in returns:
+                            if int(r["request_id"]) == ret["request_id"]:
+                                # we have returned this one
+                                myReqsList.remove(r)
+
+                        losses = db.LossKeys.find()
+                        for l in losses:
+                            if int(l["request_id"].id) == r["request_id"]:
+                                # we have returned this one
+                                myReqsList.remove(r)
+
+
+                if len(myReqsList) > 0:
+                    people.append(e)
+
+        if len(people) > 0:
+            for p in people:
+                printCollectionLine(p)
+        else:
+            print("Nobody has access to this room!")
+
+    except Exception as e:
+        print(e)
+        print("Cameron fucked up big time :)")
+        return
 
 
 def menu():
@@ -744,6 +811,13 @@ def menu():
                 deleteKey()
             elif choice == 8:
                 deleteEmployee()
+            elif choice == 9:
+                addNewDoor()
+            elif choice == 10:
+                updateRequest()
+            elif choice == 11:
+                listAllWhoCanEnter()
+
             else:
                 print("Input not on the list")
 
