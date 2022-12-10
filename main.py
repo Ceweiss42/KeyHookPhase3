@@ -668,7 +668,7 @@ def deleteKey():
         printCollectionLine(r)
         keysList.append(r)
         count += 1
-
+    #add try and catch that checks if the key is owned by anyone
     chosenkey = keysList[int(input("Please enter the index of the key you want to delete: "))]
     db.Keys.delete_one({"_id": chosenkey["_id"]})
     print("The key has been deleted")
